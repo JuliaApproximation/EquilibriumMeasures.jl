@@ -1,7 +1,7 @@
 module EquilibriumMeasures
     using Base, Compat, DualNumbers, ApproxFun, SingularIntegralEquations
 
-export equilbriummeasure
+export equilibriummeasure
 
 # We need to implement some functionality for the ApproxFun constructor to work with dual numbers
 Base.sinpi(x::Dual)=sin(π*x)
@@ -19,8 +19,8 @@ end
 
 
 
-function equilbriummeasuresupport(V,ab=Interval();maxiterations=100)
-    a,b=ab.a,ab.b
+function equilibriummeasuresupport(V,ab=Interval();maxiterations=100)
+    a,b=sort([ab.a,ab.b])
 
     # Newton iteration, using dual numbers
     for k=1:maxiterations
@@ -28,7 +28,7 @@ function equilbriummeasuresupport(V,ab=Interval();maxiterations=100)
         p=real(F1)
         J=[epsilon(F1) epsilon(F(V,a,dual(b,1)))]
 
-        an,bn=[a,b]-J\p
+        an,bn=sort([a,b]-J\p)
         if isapprox(an,a) && isapprox(bn,b)
             return Interval(an,bn)
         else
@@ -39,6 +39,7 @@ function equilbriummeasuresupport(V,ab=Interval();maxiterations=100)
     warn("maxiterations reached")
     Interval(a,b)
 end
-equilbriummeasure(V,gs...;opts...)=hilbertinverse(Fun(V,equilbriummeasuresupport(V,gs...;opts...))')/(2π)
+# we assume that the zeroth coefficient is zero
+equilibriummeasure(V,gs...;opts...)=-hilbertinverse(Fun(V,equilibriummeasuresupport(V,gs...;opts...))';tolerance=0.1)/(2π)
 
 end #module

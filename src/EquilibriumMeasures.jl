@@ -1,7 +1,7 @@
 module EquilibriumMeasures
     using Base, Compat, DualNumbers, ApproxFun, SingularIntegralEquations
 
-export equilibriummeasure
+export equilibriummeasure,hilbertinverse
 
 # We need to implement some functionality for the ApproxFun constructor to work with dual numbers
 Base.sinpi(x::Dual)=sin(π*x)
@@ -43,6 +43,8 @@ end
 
 function emmoment(f::Fun{Chebyshev};bounded=:none)
     cfs=pad(f.coefficients,2)
+    d=domain(f)
+    a,b=d.a,d.b
     if bounded==:left
         (a-b)/4*cfs[1]
     elseif bounded==:right
@@ -59,8 +61,14 @@ function F(V,a,b)
 end
 
 
+equilibriummeasuresupport(V,ab::Vector;opts...)=equilibriummeasuresupport(V,convert(Domain,ab);opts...)
+function equilibriummeasuresupport(V,ab=Interval();maxiterations=100,bounded=:none)
+    if bounded == :left
+        return equilibriummeasuresupportbounded(false,V,ab;maxiterations=maxiterations)
+    elseif bounded == :right
+        return equilibriummeasuresupportbounded(true,V,ab;maxiterations=maxiterations)
+    end
 
-function equilibriummeasuresupport(V,ab=Interval();maxiterations=100)
     a,b=sort([ab.a,ab.b])
 
     # Newton iteration, using dual numbers
@@ -80,7 +88,43 @@ function equilibriummeasuresupport(V,ab=Interval();maxiterations=100)
     warn("maxiterations reached")
     Interval(a,b)
 end
+
+
+
+
+Fbounded(s::Bool,V,a,b)=emmoment(Fun(V,Interval(a,b))';bounded=s?(:right):(:left))-1
+
+function equilibriummeasuresupportbounded(s::Bool,V,ab=Interval();maxiterations=100)
+    a,b=ab.a,ab.b
+    for k=1:maxiterations
+        F1=s?Fbounded(s,V,a,dual(b,1.)):Fbounded(s,V,dual(a,1.),b)
+
+        p=real(F1)
+        J=epsilon(F1)
+
+        if s
+            bn=b-J\p
+            if isapprox(bn,b)
+                return Interval(a,bn)
+            else
+                b=bn
+            end
+        else
+            an=a-J\p
+            if isapprox(an,a)
+                return Interval(an,b)
+            else
+                a=an
+            end
+        end
+    end
+    warn("maxiterations reached")
+    Interval(a,b)
+end
+
 # we assume that the zeroth coefficient is zero
-equilibriummeasure(V,gs...;opts...)=-hilbertinverse(Fun(V,equilibriummeasuresupport(V,gs...;opts...))';tolerance=0.1)/(2π)
+equilibriummeasure(V,gs...;bounded=:none,opts...)=-hilbertinverse(Fun(V,
+                                                                      equilibriummeasuresupport(V,gs...;
+                                                                                                bounded=bounded,opts...))';bounded=bounded)/(2π)
 
 end #module

@@ -1,3 +1,5 @@
+
+__precompile__()
 module EquilibriumMeasures
     using Base, Compat, DualNumbers, ApproxFun, SingularIntegralEquations
 
@@ -41,7 +43,7 @@ end
 
 # this must be zero for the corrects support
 
-function emmoment(f::Fun{Chebyshev};bounded=:none)
+function emmoment{CC<:Chebyshev}(f::Fun{CC};bounded=:none)
     cfs=pad(f.coefficients,2)
     d=domain(f)
     a,b=d.a,d.b

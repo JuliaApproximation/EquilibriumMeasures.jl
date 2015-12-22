@@ -6,11 +6,11 @@ module EquilibriumMeasures
 export equilibriummeasure,hilbertinverse
 
 # We need to implement some functionality for the ApproxFun constructor to work with dual numbers
-Base.sinpi(x::Dual)=sin(π*x)
+
 ApproxFun.real{T}(::Type{Dual{T}})=Dual{ApproxFun.real(T)}
-ApproxFun.plan_chebyshevtransform{D<:Dual}(v::Vector{D})=ApproxFun.plan_chebyshevtransform(real(v))
-ApproxFun.chebyshevtransform{D<:Dual}(v::Vector{D},plan...)=dual(chebyshevtransform(real(v),plan...),chebyshevtransform(epsilon(v),plan...))
-ApproxFun.chop!(f::Fun,d::Dual)=chop!(f,real(d))
+ApproxFun.plan_chebyshevtransform{D<:Dual}(v::Vector{D})=ApproxFun.plan_chebyshevtransform(realpart(v))
+ApproxFun.chebyshevtransform{D<:Dual}(v::Vector{D},plan...)=dual(chebyshevtransform(realpart(v),plan...),chebyshevtransform(epsilon(v),plan...))
+ApproxFun.chop!(f::Fun,d::Dual)=chop!(f,realpart(d))
 
 
 
@@ -28,11 +28,11 @@ function hilbertinverse(u::Fun;tolerance=100eps(),bounded=:none)
     else
         # invert Corollary 5.10 of Olver&Trogdon
         if bounded==:left
-            cfs=[cfs[1],cfs[1],.5*cfs[2:end]]
+            cfs=[cfs[1];cfs[1];.5*cfs[2:end]]
         elseif bounded==:right
-            cfs=[-cfs[1],cfs[1],.5*cfs[2:end]]
+            cfs=[-cfs[1];cfs[1];.5*cfs[2:end]]
         else
-            cfs=[0.,cfs[1],.5*cfs[2:end]]
+            cfs=[0.;cfs[1];.5*cfs[2:end]]
         end
         cfs=coefficients(cfs,ChebyshevDirichlet{1,1},Chebyshev)
         Fun(cfs,JacobiWeight(-.5,-.5,Chebyshev(domain(u))))
@@ -76,7 +76,7 @@ function equilibriummeasuresupport(V,ab=Interval();maxiterations=100,bounded=:no
     # Newton iteration, using dual numbers
     for k=1:maxiterations
         F1=F(V,dual(a,1.),b)
-        p=real(F1)
+        p=realpart(F1)
         J=[epsilon(F1) epsilon(F(V,a,dual(b,1)))]
 
         an,bn=sort([a,b]-J\p)
@@ -101,7 +101,7 @@ function equilibriummeasuresupportbounded(s::Bool,V,ab=Interval();maxiterations=
     for k=1:maxiterations
         F1=s?Fbounded(s,V,a,dual(b,1.)):Fbounded(s,V,dual(a,1.),b)
 
-        p=real(F1)
+        p=realpart(F1)
         J=epsilon(F1)
 
         if s

@@ -1,5 +1,4 @@
 
-__precompile__()
 module EquilibriumMeasures
     using Base, Compat, DualNumbers, ApproxFun, SingularIntegralEquations
 
@@ -91,7 +90,7 @@ end
 Fbounded(s::Bool,V,a,b) = emmoment(Fun(V,(a..b))'; bounded= s ? (:right) : (:left))-1
 
 function equilibriummeasuresupportbounded(s::Bool,V,ab=(-1.0..1.0);maxiterations=100)
-    a,b=ab.a,ab.b
+    a,b=endpoints(ab)
     for k=1:maxiterations
         F1=s ? Fbounded(s,V,a,dual(b,1.)) : Fbounded(s,V,dual(a,1.),b)
 

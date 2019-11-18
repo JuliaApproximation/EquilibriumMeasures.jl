@@ -3,20 +3,30 @@ using OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays
 x = Inclusion(-sqrt(2)..sqrt(2))
 
 
+
+
 equilibriummeasure(x -> log.(abs.(x .- x')))
 equilibriummeasure(x -> abs.(x .- x').^α)
 
 using ForwardDiff
 
-w, U = UltrasphericalWeight(1), Ultraspherical(1)
+
+T = Chebyshev()
+U = Ultraspherical(1) 
+x = axes(T,1)
+V = x.^2
+@time T \ diff(T*(T\V))
+
+
+
 
 Ta = a -> begin
+    w, U = UltrasphericalWeight{typeof(a)}(1), Ultraspherical{typeof(a)}(1)
     x = Inclusion(-a..a)
     H = inv.(x .- x')
     T = Chebyshev{typeof(a)}()[x/a,:]
-    Tn = Chebyshev{typeof(a)}()[x/a,2:5]
     wU = (w .* U)[x/a,:]
-    ((T \ (H*wU))[2:end,:] \ [Tn \ x; Zeros{typeof(a)}(∞)])
+    ((T \ (H*wU))[2:end,:] \ (T\x)[2:end]
 end
 
 Ta = a -> begin

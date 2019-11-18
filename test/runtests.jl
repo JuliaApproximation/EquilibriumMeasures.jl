@@ -1,7 +1,7 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays
 
 using ForwardDiff
-
+Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
 a = ForwardDiff.Dual(sqrt(2),1)
 Ta = (V,a) -> begin
@@ -13,14 +13,15 @@ Ta = (V,a) -> begin
     wU = (w .* U)[x/a,:] 
     # Hilbert
     Hd = (T \ (H*wU))[2:end,:]
-    Vp = diff(T*(T\V.(x)))
+    Vf = T*(T\V.(x))
+    Vp = diff(Vf)
     w = wU * (Hd \ (T \ Vp)[2:end])
 end
 
 V = x -> x^2
-@time Ta(V, 2.0)
-
-ForwardDiff.derivative(x -> Ta(V,x), 2.0)
+@time ForwardDiff.partials(sum(Ta(V, ForwardDiff.Dual(2.0,1)))/2)[1]
+Sx = x -> sum(Ta(V,x))/2
+@time ForwardDiff.derivative(Sx, 2.0)
 sum(w)/2
 
 equilibriummeasure(x -> log.(abs.(x .- x')))
@@ -56,7 +57,7 @@ Ta = a -> begin
 end
 
 N = a -> Ta(a)[1] - sqrt(2)/π
-Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
+
 
 ForwardDiff.derivative(N,1.4)
 

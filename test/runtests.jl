@@ -1,9 +1,27 @@
 using OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays
 
-x = Inclusion(-sqrt(2)..sqrt(2))
+using ForwardDiff
 
 
+a = ForwardDiff.Dual(sqrt(2),1)
+Ta = (V,a) -> begin
+    w, U = UltrasphericalWeight{typeof(a)}(1), Ultraspherical{typeof(a)}(1)
+    x = Inclusion(-a..a)
+    H = inv.(x .- x')
+    # basis on -a..a
+    T = Chebyshev{typeof(a)}()[x/a,:]
+    wU = (w .* U)[x/a,:] 
+    # Hilbert
+    Hd = (T \ (H*wU))[2:end,:]
+    Vp = diff(T*(T\V.(x)))
+    w = wU * (Hd \ (T \ Vp)[2:end])
+end
 
+V = x -> x^2
+@time Ta(V, 2.0)
+
+ForwardDiff.derivative(x -> Ta(V,x), 2.0)
+sum(w)/2
 
 equilibriummeasure(x -> log.(abs.(x .- x')))
 equilibriummeasure(x -> abs.(x .- x').^α)
@@ -15,19 +33,18 @@ T = Chebyshev()
 U = Ultraspherical(1) 
 x = axes(T,1)
 V = x.^2
-@time T \ diff(T*(T\V))
+H = inv.(x .- x')
+wU = UltrasphericalWeight(1) .* Ultraspherical(1)
+
+
+
+sum(w)
 
 
 
 
-Ta = a -> begin
-    w, U = UltrasphericalWeight{typeof(a)}(1), Ultraspherical{typeof(a)}(1)
-    x = Inclusion(-a..a)
-    H = inv.(x .- x')
-    T = Chebyshev{typeof(a)}()[x/a,:]
-    wU = (w .* U)[x/a,:]
-    ((T \ (H*wU))[2:end,:] \ (T\x)[2:end]
-end
+
+
 
 Ta = a -> begin
     x = Inclusion(-a..a)

@@ -1,24 +1,115 @@
-using OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays
+using EquilibriumMeasures, Plots
 
+μ = equilibriummeasure(x -> x^2)
+
+
+
+
+
+OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays, ArrayLayouts, LazyArrays
 using ForwardDiff
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
 a = ForwardDiff.Dual(sqrt(2),1)
+a = 2.0
+
+import LazyArrays: paddeddata
+
+
+
+
+
+using ForwardDiff
+mom(V, ForwardDiff.Dual(2.0,1))
+
+
+
+function mom(V,a)
+    x = Inclusion(-a..a)
+    T = ChebyshevT{typeof(a)}()[x/a,:]
+    U = ChebyshevU{typeof(a)}()[x/a,:]
+    cfs = ldiv(T , V.(x))
+    D = apply(*, Derivative(axes(T,1)), T).args[2]
+    UT = ldiv(U, T)
+    Vp = UT \ (D * cfs)
+    
+end
+
+
 Ta = (V,a) -> begin
-    w, U = UltrasphericalWeight{typeof(a)}(1), Ultraspherical{typeof(a)}(1)
+    w, U = ChebyshevUWeight{typeof(a)}(), ChebyshevU{typeof(a)}()
     x = Inclusion(-a..a)
     H = inv.(x .- x')
     # basis on -a..a
-    T = Chebyshev{typeof(a)}()[x/a,:]
+    T = ChebyshevT{typeof(a)}()[x/a,:]
     wU = (w .* U)[x/a,:] 
     # Hilbert
-    Hd = (T \ (H*wU))[2:end,:]
-    Vf = T*(T\V.(x))
+    App =  applied(*, H, wU)
+    HwU = materialize(App)
+    LT = ldiv(T, HwU)
+    Hd = LT[2:end,:]
+    Vf = T* ldiv(T,V.(x))
     Vp = diff(Vf)
-    w = wU * (Hd \ (T \ Vp)[2:end])
+    w = wU * ldiv(Hd, ldiv(T, Vp)[2:end])
 end
 
-V = x -> x^2
+
+
+a = 2.0; x = Inclusion(-a..a)
+@enter view(ChebyshevT{typeof(a)}(),x/a,:)
+Ta(V, a)
+using DualNumbers
+
+
+a =  dual(1.0,1)
+
+
+Ta = (V,a) -> begin
+    w, U = ChebyshevUWeight{typeof(a)}(), ChebyshevU{typeof(a)}()
+    x = Inclusion(-a..a)
+    H = inv.(x .- x')
+    # basis on -a..a
+    T = ChebyshevT{typeof(a)}()[x/a,:]
+    wU = (w .* U)[x/a,:] 
+    # Hilbert
+    App =  applied(*, H, wU)
+    HwU = materialize(App)
+    LT = ldiv(T, HwU)
+    Hd = LT[2:end,:]
+    Vf = T* ldiv(T,V.(x))
+    Vp = diff(Vf)
+    w = wU * ldiv(Hd, ldiv(T, Vp)[2:end])
+end
+
+using QuasiArrays
+import ContinuumArrays: demap, ApplyQuasiArray
+A,B = T, HwU; A,B = demap(A),demap(first(B.args)); B = ApplyQuasiArray(B);
+@which apply(\,A,B)
+ldiv(T, HwU)
+
+
+
+
+
+V = x->x^2; a = 2.0
+
+@code_warntype Ta(x->x^2, 2.0)
+
+)
+import OrthogonalPolynomialsQuasi: adaptivetransform_ldiv
+V = x -> x^2; T = Chebyshev(); @which adaptivetransform_ldiv(T,V.(axes(T,1)))
+x = Inc
+x
+ForwardDiff.derivative(a -> begin
+    T = Chebyshev{typeof(a)}()
+    x = axes(T,1); T \ V.(x) 
+end, 2.0)
+
+T = Chebyshev(); x = axes(T,1)
+V = x -> x^2; Vx = V.(x)
+
+@which T \ Vx
+
 @time ForwardDiff.partials(sum(Ta(V, ForwardDiff.Dual(2.0,1)))/2)[1]
 Sx = x -> sum(Ta(V,x))/2
 @time ForwardDiff.derivative(Sx, 2.0)

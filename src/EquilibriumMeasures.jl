@@ -1,38 +1,47 @@
 
 module EquilibriumMeasures
-using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, ForwardDiff
+using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
 
-import ForwardDiff: derivative
+import ForwardDiff: derivative, gradient, jacobian
 
 export equilibriummeasure
 
-function _equilibriummeasure(V, a)
-    x = Inclusion(-a..a)
-    T = ChebyshevT{typeof(a)}()[x/a,:]
-    wU = (ChebyshevUWeight{typeof(a)}() .* ChebyshevU{typeof(a)}())[x/a,:]
-    U = ChebyshevU{typeof(a)}()[x/a,:]
+Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
+
+function _equilibriummeasure(V, a, b)
+    Typ = float(promote_type(typeof(a), typeof(b)))
+    T = ChebyshevT{Typ}()
+    x = Inclusion(a..b)
+    y = affine(x, axes(T,1)) # affine map from a..b to -1..1
+    T̃ = T[y,:]
+    wŨ = (ChebyshevUWeight{Typ}() .* ChebyshevU{Typ}())[y,:]
+    Ũ = ChebyshevU{Typ}()[y,:]
     # Operators
-    H = T \ (inv.(x .- x') * wU) # Hilbert wU -> T
-    D = U \ (Derivative(axes(T,1)) * T) # Derivative T -> U
-    UT = U \ T  # Converion T -> U
-    V_cfs = T \ V.(x)
-    Vp_cfs = UT \ (D * V_cfs)
-    wU * (H[2:end,:] \ Vp_cfs[2:end])
+    H = T̃ \ (inv.(x .- x') * wŨ) # Hilbert wU\-> T̃
+    D = Ũ \ (Derivative(axes(T̃,1)) * T̃) # Derivative T̃ -> Ũ
+    ŨT̃ = Ũ \ T̃  # Converion T̃ -> Ũ
+    V_cfs = T̃ \ V.(x)
+    Vp_cfs = ŨT̃ \ (D * V_cfs)
+    Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])
 end
+
 
 # Intentionally hide type for compile time
 struct EquilibriumMeasureMoment
     V
 end
 
-(E::EquilibriumMeasureMoment)(a) = sum(_equilibriummeasure(E.V,a))/2 - 1
+function (E::EquilibriumMeasureMoment)(a) 
+    c0,μ = _equilibriummeasure(E.V, a...)
+    SVector(c0, sum(μ)/2 - 1)
+end
 
 
-function equilibriummeasure(V; a = 2.0, maxiterations=1000)
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000)
     μ = EquilibriumMeasureMoment(V)
     for k=1:maxiterations    
-        an = a - derivative(μ, a)\μ(a)
-        an ≈ a && return _equilibriummeasure(V,a)
+        an = a - jacobian(μ, a)\μ(a)
+        an ≈ a && return _equilibriummeasure(V, a...)[2]
         a = an
     end
     error("Max its")

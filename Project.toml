@@ -3,9 +3,16 @@ uuid = "f387465c-e20c-5ab1-9210-5d86af51062a"
 version = "0.0.1"
 
 [deps]
-OrthogonalPolynomialsQuasi = "aa41a628-2c43-45df-899b-83ab96621781"
 ContinuumArrays = "7ae1f121-cc2c-504b-ac30-9b923412ae5c"
+DomainSets = "5b8099bc-c8ec-5219-889f-1d9e522a28bf"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+OrthogonalPolynomialsQuasi = "aa41a628-2c43-45df-899b-83ab96621781"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-ContinuumArrays = "0.0.2"
-julia = "1.1"
+ContinuumArrays = "0.0.3"
+ForwardDiff = "0.10.6"
+IntervalSets = "0.3.1"
+julia = "1.2"
+StaticArrays = "0.12"

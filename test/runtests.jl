@@ -1,10 +1,19 @@
-using EquilibriumMeasures, Plots
+using EquilibriumMeasures, IntervalSets
+# using Plots
 
 μ = equilibriummeasure(x -> x^2)
+a,b = first(axes(μ,1)),last(axes(μ,1))
+xx = range(a,b; length=20)
+view(μ,xx)
 
+plot(xx, getindex.(Ref(μ), xx))
 
+@time μ[0.1]
 
+μ.args[1][0.1,
+μ.args[2].datasize
 
+μ[xx]
 
 OrthogonalPolynomialsQuasi, ContinuumArrays, IntervalSets, FillArrays, ArrayLayouts, LazyArrays
 using ForwardDiff
@@ -14,6 +23,7 @@ a = ForwardDiff.Dual(sqrt(2),1)
 a = 2.0
 
 import LazyArrays: paddeddata
+
 
 
 

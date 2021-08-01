@@ -1,6 +1,6 @@
 
 module EquilibriumMeasures
-using Base, OrthogonalPolynomialsQuasi, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
+using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
 
 import ForwardDiff: derivative, gradient, jacobian
 
@@ -14,7 +14,7 @@ function _equilibriummeasure(V, a, b)
     x = Inclusion(a..b)
     y = affine(x, axes(T,1)) # affine map from a..b to -1..1
     T̃ = T[y,:]
-    wŨ = (ChebyshevUWeight{Typ}() .* ChebyshevU{Typ}())[y,:]
+    wŨ = Weighted(ChebyshevU{Typ}())[y,:]
     Ũ = ChebyshevU{Typ}()[y,:]
     # Operators
     H = T̃ \ (inv.(x .- x') * wŨ) # Hilbert wU\-> T̃

@@ -12,6 +12,10 @@ using EquilibriumMeasures, Test
     @test last(axes(μ,1)) ≈ 1.0745699318235422 atol=1E-13
     @test sum(μ) ≈ 1 atol=1E-13
     @test μ[0.1] ≈ 0.40005825716887744
+
+    μ = equilibriummeasure(x -> x^4 + x^3 - x^2)
+    @test sum(μ) ≈ 1 atol=1E-13
+    @test μ[0.1] ≈ 0.19674192408704289
 end
     
 

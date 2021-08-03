@@ -1,124 +1,122 @@
 
 module EquilibriumMeasures
-    using Base, Compat, DualNumbers, ApproxFun, SingularIntegralEquations
+using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
 
-export equilibriummeasure,hilbertinverse
+import ForwardDiff: derivative, gradient, jacobian
 
+export equilibriummeasure
 
+Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
-
-## hilbertinverse
-# returns a function whose hilbert transform is the given function
-
-function hilbertinverse(u::Fun;tolerance=100eps(),bounded=:none)
-    cfs=coefficients(u,Chebyshev)
-    if abs(first(cfs)) < tolerance
-        # no singularity
-        # invert Corollary 5.6 of Olver&Trogdon
-        cfs=-coefficients(cfs[2:end], Ultraspherical(1,domain(u)),Chebyshev(domain(u)))
-        Fun(JacobiWeight(.5,.5,Chebyshev(domain(u))),cfs)
-    else
-        # invert Corollary 5.10 of Olver&Trogdon
-        if bounded==:left
-            cfs=[cfs[1];cfs[1];.5*cfs[2:end]]
-        elseif bounded==:right
-            cfs=[-cfs[1];cfs[1];.5*cfs[2:end]]
-        else
-            cfs=[0.;cfs[1];.5*cfs[2:end]]
-        end
-        cfs=coefficients(cfs,ChebyshevDirichlet{1,1}(domain(u)),Chebyshev(domain(u)))
-        Fun(JacobiWeight(-.5,-.5,Chebyshev(domain(u))),cfs)
-    end
+function _equilibriummeasure(V, a, b)
+    Typ = float(promote_type(typeof(a), typeof(b)))
+    T = ChebyshevT{Typ}()
+    x = Inclusion(a..b)
+    y = affine(x, axes(T,1)) # affine map from a..b to -1..1
+    T̃ = T[y,:]
+    wŨ = Weighted(ChebyshevU{Typ}())[y,:]
+    Ũ = ChebyshevU{Typ}()[y,:]
+    # Operators
+    H = T̃ \ (inv.(x .- x') * wŨ) # Hilbert wU\-> T̃
+    D = Ũ \ (Derivative(axes(T̃,1)) * T̃) # Derivative T̃ -> Ũ
+    ŨT̃ = Ũ \ T̃  # Converion T̃ -> Ũ
+    V_cfs = T̃ \ V.(x)
+    Vp_cfs = ŨT̃ \ (D * V_cfs)
+    Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])/2
 end
 
 
-
-# this must be zero for the corrects support
-
-function emmoment(f::Fun{<:Chebyshev};bounded=:none)
-    cfs=pad(f.coefficients,2)
-    d=domain(f)
-    a,b = endpoints(d)
-    if bounded==:left
-        (a-b)/4*cfs[1]
-    elseif bounded==:right
-        (b-a)/4*cfs[1]
-    else
-        (b-a)/8*cfs[2]
-    end
+# Intentionally hide type for compile time
+struct EquilibriumMeasureMoment
+    V
 end
 
-function F(V,a,b)
-    f=Fun(V,a..b)'
-
-    [f.coefficients[1],emmoment(f)-1]
+function (E::EquilibriumMeasureMoment)(a) 
+    c0,μ = _equilibriummeasure(E.V, a...)
+    SVector(c0, sum(μ) - 1)
 end
 
 
-equilibriummeasuresupport(V,ab::Vector;opts...) =
-    equilibriummeasuresupport(V,convert(Domain,ab);opts...)
-function equilibriummeasuresupport(V,ab=(-1.0..1.0);maxiterations=100,bounded=:none)
-    if bounded == :left
-        return equilibriummeasuresupportbounded(false,V,ab;maxiterations=maxiterations)
-    elseif bounded == :right
-        return equilibriummeasuresupportbounded(true,V,ab;maxiterations=maxiterations)
-    end
-
-    a,b = endpoints(ab)
-
-    # Newton iteration, using dual numbers
-    for k=1:maxiterations
-        F1 = F(V,dual(a,1.),b)
-        p = realpart.(F1)
-        J=[epsilon.(F1) epsilon.(F(V,a,dual(b,1)))]
-
-        an,bn=sort([a,b]-J\p)
-        if isapprox(an,a) && isapprox(bn,b)
-            return (an..bn)
-        else
-            a,b=an,bn
-        end
-    end
-
-    warn("maxiterations reached")
-    a..b
-end
-
-
-
-
-Fbounded(s::Bool,V,a,b) = emmoment(Fun(V,(a..b))'; bounded= s ? (:right) : (:left))-1
-
-function equilibriummeasuresupportbounded(s::Bool,V,ab=(-1.0..1.0);maxiterations=100)
-    a,b=endpoints(ab)
-    for k=1:maxiterations
-        F1=s ? Fbounded(s,V,a,dual(b,1.)) : Fbounded(s,V,dual(a,1.),b)
-
-        p=realpart(F1)
-        J=epsilon(F1)
-
-        if s
-            bn=b-J\p
-            if isapprox(bn,b)
-                return (a..bn)
-            else
-                b=bn
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000)
+    μ = EquilibriumMeasureMoment(V)
+    for k=1:maxiterations    
+        an = a - jacobian(μ, a)\μ(a)
+        if an ≈ a
+            # improve accuracy a bit more
+            for _=1:3
+                a = a - jacobian(μ, a)\μ(a)
             end
-        else
-            an=a-J\p
-            if isapprox(an,a)
-                return (an..b)
-            else
-                a=an
-            end
+            return _equilibriummeasure(V, a...)[2]
         end
+        a = an
     end
-    warn("maxiterations reached")
-    a..b
+    error("Max its")
 end
 
-# we assume that the zeroth coefficient is zero
-equilibriummeasure(V,gs...;bounded=:none,opts...) =
-    -hilbertinverse(Fun(V,equilibriummeasuresupport(V,gs...;bounded=bounded,opts...))';bounded=bounded)/(2π)
+
+
+# function equilibriummeasuresupport(V,ab=(-1.0..1.0);maxiterations=100,bounded=:none)
+#     if bounded == :left
+#         return equilibriummeasuresupportbounded(false,V,ab;maxiterations=maxiterations)
+#     elseif bounded == :right
+#         return equilibriummeasuresupportbounded(true,V,ab;maxiterations=maxiterations)
+#     end
+
+#     a,b = endpoints(ab)
+
+#     # Newton iteration, using dual numbers
+#     for k=1:maxiterations
+#         F1 = F(V,dual(a,1.),b)
+#         p = realpart.(F1)
+#         J=[epsilon.(F1) epsilon.(F(V,a,dual(b,1)))]
+
+#         an,bn=sort([a,b]-J\p)
+#         if isapprox(an,a) && isapprox(bn,b)
+#             return (an..bn)
+#         else
+#             a,b=an,bn
+#         end
+#     end
+
+#     warn("maxiterations reached")
+#     a..b
+# end
+
+
+
+
+# Fbounded(s::Bool,V,a,b) = emmoment(Fun(V,(a..b))'; bounded= s ? (:right) : (:left))-1
+
+# function equilibriummeasuresupportbounded(s::Bool,V,ab=(-1.0..1.0);maxiterations=100)
+# a,b=endpoints(ab)
+# for k=1:maxiterations
+#     F1=s ? Fbounded(s,V,a,dual(b,1.)) : Fbounded(s,V,dual(a,1.),b)
+
+#     p=realpart(F1)
+#     J=epsilon(F1)
+
+#     if s
+#         bn=b-J\p
+#         if isapprox(bn,b)
+#             return (a..bn)
+#         else
+#             b=bn
+#         end
+#     else
+#         an=a-J\p
+#         if isapprox(an,a)
+#             return (an..b)
+#         else
+#             a=an
+#         end
+#     end
+# end
+# warn("maxiterations reached")
+# a..b
+# end
+
+# # we assume that the zeroth coefficient is zero
+# equilibriummeasure(V,gs...;bounded=:none,opts...) =
+# -hilbertinverse(Fun(V,equilibriummeasuresupport(V,gs...;bounded=bounded,opts...))';bounded=bounded)/(2π)
 
 end #module

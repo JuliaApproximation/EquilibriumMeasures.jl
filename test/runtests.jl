@@ -1,4 +1,4 @@
-using EquilibriumMeasures, Test
+using EquilibriumMeasures, StaticArrays, Test
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -16,6 +16,13 @@ using EquilibriumMeasures, Test
     μ = equilibriummeasure(x -> x^4 + x^3 - x^2)
     @test sum(μ) ≈ 1 atol=1E-13
     @test μ[0.1] ≈ 0.19674192408704289
+
+    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/250; a=SVector(-3,3))
+    @test sum(μ) ≈ 1 atol=1E-13
+
+    # non-unique minimiser
+    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2))
+    @test sum(μ) ≈ 1 atol=1E-13
 end
     
 

@@ -22,7 +22,7 @@ function _equilibriummeasure(V, a, b)
     ŨT̃ = Ũ \ T̃  # Converion T̃ -> Ũ
     V_cfs = T̃ \ V.(x)
     Vp_cfs = ŨT̃ \ (D * V_cfs)
-    Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])
+    Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])/2
 end
 
 
@@ -33,7 +33,7 @@ end
 
 function (E::EquilibriumMeasureMoment)(a) 
     c0,μ = _equilibriummeasure(E.V, a...)
-    SVector(c0, sum(μ)/2 - 1)
+    SVector(c0, sum(μ) - 1)
 end
 
 
@@ -41,7 +41,13 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000)
     μ = EquilibriumMeasureMoment(V)
     for k=1:maxiterations    
         an = a - jacobian(μ, a)\μ(a)
-        an ≈ a && return _equilibriummeasure(V, a...)[2]
+        if an ≈ a
+            # improve accuracy a bit more
+            for _=1:3
+                a = a - jacobian(μ, a)\μ(a)
+            end
+            return _equilibriummeasure(V, a...)[2]
+        end
         a = an
     end
     error("Max its")

@@ -1,10 +1,11 @@
-
 module EquilibriumMeasures
 using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
 
 import ForwardDiff: derivative, gradient, jacobian
 
-export equilibriummeasure
+import LinearAlgebra: dot
+
+export equilibriummeasure, _equilibriummeasure
 
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
@@ -36,17 +37,55 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0, sum(μ) - 1)
 end
 
+function deflation_op(state, sol, power, shift)
+    num_sols = length(sol)
+    m = 1.0
+    for iter = 1:num_sols
+        normsq = dot(state.-sol[iter], state.-sol[iter])^(power - 2)
+        factor = 1.0/normsq + shift
+        m = m*factor
+    end
+    m
+end
 
-function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000)
+function deflation_deriv(update, state, sol, power, shift)
+    m = deflation_op(state, sol, power, shift)
+    num_sols = length(sol)
+    dm = 0.0
+    for iter = 1:num_sols
+        scale = m/deflation_op(state, sol[iter], power, shift)
+        deriv = -power*dot(state, update)/dot(state.-sol[iter], state.-sol[iter])^(0.5*(power + 1))
+        dm += scale*deriv
+    end
+    dm
+end
+
+function deflation_scale(update, state, sol, power, shift)
+    deriv = deflation_deriv(update, state, sol, power, shift)
+    minv = 1.0/deflation_op(state, sol, power, shift)
+    tau = 1 + minv*deriv/(1 - minv*deriv)
+    tau
+end
+
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0)
     μ = EquilibriumMeasureMoment(V)
-    for k=1:maxiterations    
-        an = a - jacobian(μ, a)\μ(a)
+    num_found_sols = length(knownsolutions)
+    for k=1:maxiterations   
+        update = - jacobian(μ, a)\μ(a)
+        if num_found_sols > 0
+            update = deflation_scale(update, a, knownsolutions, power, shift) * update
+        end
+        an = a + dampening*update
         if an ≈ a
             # improve accuracy a bit more
             for _=1:3
-                a = a - jacobian(μ, a)\μ(a)
+                update = - jacobian(μ, a)\μ(a)
+                if num_found_sols > 0
+                    update = deflation_scale(update, a, knownsolutions, power, shift) * update
+                end
+                a = a + dampening*update
             end
-            return _equilibriummeasure(V, a...)[2]
+            return a
         end
         a = an
     end

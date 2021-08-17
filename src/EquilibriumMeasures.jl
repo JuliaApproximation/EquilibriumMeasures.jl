@@ -37,36 +37,6 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0, sum(μ) - 1)
 end
 
-function deflation_op(state, sol, power, shift)
-    num_sols = length(sol)
-    m = 1.0
-    for iter = 1:num_sols
-        normsq = dot(state.-sol[iter], state.-sol[iter])^(power - 2)
-        factor = 1.0/normsq + shift
-        m = m*factor
-    end
-    m
-end
-
-function deflation_deriv(update, state, sol, power, shift)
-    m = deflation_op(state, sol, power, shift)
-    num_sols = length(sol)
-    dm = 0.0
-    for iter = 1:num_sols
-        scale = m/deflation_op(state, sol[iter], power, shift)
-        deriv = -power*dot(state, update)/dot(state.-sol[iter], state.-sol[iter])^(0.5*(power + 1))
-        dm += scale*deriv
-    end
-    dm
-end
-
-function deflation_scale(update, state, sol, power, shift)
-    deriv = deflation_deriv(update, state, sol, power, shift)
-    minv = 1.0/deflation_op(state, sol, power, shift)
-    tau = 1 + minv*deriv/(1 - minv*deriv)
-    tau
-end
-
 function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0)
     μ = EquilibriumMeasureMoment(V)
     num_found_sols = length(knownsolutions)
@@ -92,6 +62,49 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knowns
     error("Max its")
 end
 
+# Deflation code
+
+function  deflation_inner_products(state, sol)
+    num_sols = length(sol)
+    inner_products = zeros(num_sols)
+    for iter = 1:num_sols
+        inner_products[iter] = dot(state.-sol[iter], state.-sol[iter])
+    end
+    inner_products
+end
+
+function deflation_op(state, sol, power, shift)
+    num_sols = length(sol)
+    m = 1.0
+    inner_products = deflation_inner_products(state, sol)
+    
+    for iter = 1:num_sols
+        normsq = inner_products[iter]
+        factor = 1.0/normsq^(0.5*power) + shift
+        m = m*factor
+    end
+    m, inner_products
+end
+
+function deflation_deriv(update, state, sol, power, shift)
+    m, inner_products = deflation_op(state, sol, power, shift)
+    num_sols = length(sol)
+    dm = 0.0
+    state_dot_update = dot(state, update)
+    for iter = 1:num_sols
+        scale = m/deflation_op(state, sol[iter], power, shift)[1]
+        deriv = -power*state_dot_update/inner_products[iter]^(0.5*(power + 1))
+        dm += scale*deriv
+    end
+    m, dm
+end
+
+function deflation_scale(update, state, sol, power, shift)
+    m, dm = deflation_deriv(update, state, sol, power, shift)
+    minv = 1.0/m
+    tau = 1 + minv*dm/(1 - minv*dm)
+    tau
+end
 
 
 # function equilibriummeasuresupport(V,ab=(-1.0..1.0);maxiterations=100,bounded=:none)

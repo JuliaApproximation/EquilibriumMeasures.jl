@@ -37,7 +37,7 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0, sum(μ) - 1)
 end
 
-function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0)
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnEndpoint=false)
     μ = EquilibriumMeasureMoment(V)
     num_found_sols = length(knownsolutions)
     for k=1:maxiterations   
@@ -55,7 +55,11 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knowns
                 end
                 a = a + dampening*update
             end
-            return a
+            if returnEndpoint
+                return  _equilibriummeasure(V, a...)[2], a
+            else
+                return  _equilibriummeasure(V, a...)[2]
+            end
         end
         a = an
     end

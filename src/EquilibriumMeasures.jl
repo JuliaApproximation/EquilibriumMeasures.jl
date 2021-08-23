@@ -5,7 +5,7 @@ import ForwardDiff: derivative, gradient, jacobian
 
 import LinearAlgebra: dot
 
-export equilibriummeasure, _equilibriummeasure
+export equilibriummeasure, _equilibriummeasure, deflation_inner_products, deflation_deriv, deflation_op, deflation_scale
 
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
@@ -68,32 +68,40 @@ end
 
 # Deflation code
 
-function  deflation_inner_products(state, sol)
+function  deflation_inner_products(state::SVector, sol)
     num_sols = length(sol)
-    inner_products = zeros(num_sols)
+    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+
+    inner_products = zeros(T, num_sols)
     for iter = 1:num_sols
         inner_products[iter] = dot(state.-sol[iter], state.-sol[iter])
     end
     inner_products
 end
 
-function deflation_op(state, sol, power, shift)
+function deflation_op(state::SVector, sol, power::Real, shift::Real)
     num_sols = length(sol)
-    m = 1.0
+    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+    power = T(power); shift = T(shift)
+
+    m = one(T)
     inner_products = deflation_inner_products(state, sol)
     
     for iter = 1:num_sols
         normsq = inner_products[iter]
-        factor = 1.0/normsq^(0.5*power) + shift
+        factor = one(T)/normsq^(0.5*power) + shift
         m = m*factor
     end
     m, inner_products
 end
 
-function deflation_deriv(update, state, sol, power, shift)
+function deflation_deriv(update::SVector, state::SVector, sol::Vector, power::Real, shift::Real)
     m, inner_products = deflation_op(state, sol, power, shift)
     num_sols = length(sol)
-    dm = 0.0
+    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+    power = T(power); shift = T(shift)
+
+    dm = zero(T)
     state_dot_update = dot(state, update)
     for iter = 1:num_sols
         scale = m/deflation_op(state, sol[iter], power, shift)[1]
@@ -103,10 +111,11 @@ function deflation_deriv(update, state, sol, power, shift)
     m, dm
 end
 
-function deflation_scale(update, state, sol, power, shift)
+function deflation_scale(update::SVector, state::SVector, sol::Vector, power::Real, shift::Real)
+    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
     m, dm = deflation_deriv(update, state, sol, power, shift)
-    minv = 1.0/m
-    tau = 1 + minv*dm/(1 - minv*dm)
+    minv = one(T)/m
+    tau = one(T) + minv*dm/(one(T) - minv*dm)
     tau
 end
 

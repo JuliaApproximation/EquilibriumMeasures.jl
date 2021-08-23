@@ -17,12 +17,13 @@ using EquilibriumMeasures, StaticArrays, Test
     @test sum(μ) ≈ 1 atol=1E-13
     @test μ[0.1] ≈ 0.19674192408704289
 
-    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/250; a=SVector(-3,3))
-    @test sum(μ) ≈ 1 atol=1E-13
-
     # non-unique minimiser
-    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2))
+    μ, b = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), returnEndpoint=true)
     @test sum(μ) ≈ 1 atol=1E-13
+    
+    # Deflate found solution and find another one whilst damping the Newton step
+    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), knownsolutions=[b], dampening=0.3)
+    @test sum(μ) ≈ 1 atol=1E-6
 end
     
 

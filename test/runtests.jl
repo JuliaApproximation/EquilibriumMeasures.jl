@@ -1,4 +1,4 @@
-using EquilibriumMeasures, StaticArrays, Test
+using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, Test
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -25,6 +25,18 @@ using EquilibriumMeasures, StaticArrays, Test
     μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), knownsolutions=[b], dampening=0.3)
     @test sum(μ) ≈ 1 atol=1E-6
 end
-    
 
-
+@testset "two-interval" begin
+    V = x -> x^4 - 10x^2
+    xx = range(-4,4; length=1000)
+    plot(xx, V.(xx))
+    a,b,c,d = -3,-1,1,3
+    W = PiecewiseInterlace(Weighted(chebyshevu(a..b)), Weighted(chebyshevu(c..d)))
+    T = PiecewiseInterlace(chebyshevt(a..b), chebyshevt(c..d))
+    x = axes(W,1)
+    H = T \ inv.(x .- x') * W
+    # H[Block.(2:
+    E1 = PseudoBlockArray([Eye(2); Zeros(∞,2)], (axes(W,2), Base.OneTo(2)))
+    H2 = BlockHcat(E1, H)
+    H2 \ (T \ V.(x))
+end

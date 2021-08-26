@@ -37,7 +37,7 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0, sum(μ) - 1)
 end
 
-function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnEndpoint=false)
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)
     μ = EquilibriumMeasureMoment(V)
     num_found_sols = length(knownsolutions)
     for k=1:maxiterations   
@@ -55,7 +55,7 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knowns
                 end
                 a = a + dampening*update
             end
-            if returnEndpoint
+            if returnendpoint
                 return  _equilibriummeasure(V, a...)[2], a
             else
                 return  _equilibriummeasure(V, a...)[2]
@@ -68,9 +68,9 @@ end
 
 # Deflation code
 
-function  deflation_inner_products(state::SVector, sol)
+function  deflation_inner_products(state::AbstractVector, sol)
     num_sols = length(sol)
-    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+    T = promote_type(eltype(state), eltype(eltype(sol)))
 
     inner_products = zeros(T, num_sols)
     for iter = 1:num_sols
@@ -79,9 +79,9 @@ function  deflation_inner_products(state::SVector, sol)
     inner_products
 end
 
-function deflation_op(state::SVector, sol, power::Real, shift::Real)
+function deflation_op(state::AbstractVector, sol, power::Real, shift::Real)
     num_sols = length(sol)
-    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+    T = promote_type(eltype(state), eltype(eltype(sol)))
     power = T(power); shift = T(shift)
 
     m = one(T)
@@ -89,30 +89,30 @@ function deflation_op(state::SVector, sol, power::Real, shift::Real)
     
     for iter = 1:num_sols
         normsq = inner_products[iter]
-        factor = one(T)/normsq^(0.5*power) + shift
+        factor = one(T)/normsq^(power/2) + shift
         m = m*factor
     end
     m, inner_products
 end
 
-function deflation_deriv(update::SVector, state::SVector, sol::Vector, power::Real, shift::Real)
+function deflation_deriv(update::AbstractVector, state::AbstractVector, sol::Vector, power::Real, shift::Real)
     m, inner_products = deflation_op(state, sol, power, shift)
     num_sols = length(sol)
-    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+    T = promote_type(eltype(state), eltype(eltype(sol)))
     power = T(power); shift = T(shift)
 
     dm = zero(T)
     state_dot_update = dot(state, update)
     for iter = 1:num_sols
         scale = m/deflation_op(state, sol[iter], power, shift)[1]
-        deriv = -power*state_dot_update/inner_products[iter]^(0.5*(power + 1))
+        deriv = -power*state_dot_update/inner_products[iter]^((power + 1)/2)
         dm += scale*deriv
     end
     m, dm
 end
 
-function deflation_scale(update::SVector, state::SVector, sol::Vector, power::Real, shift::Real)
-    T = promote_type(typeof(state[1]), typeof(sol[1][1]))
+function deflation_scale(update::AbstractVector, state::AbstractVector, sol::Vector, power::Real, shift::Real)
+    T = promote_type(eltype(state), eltype(eltype(sol)))
     m, dm = deflation_deriv(update, state, sol, power, shift)
     minv = one(T)/m
     tau = one(T) + minv*dm/(one(T) - minv*dm)

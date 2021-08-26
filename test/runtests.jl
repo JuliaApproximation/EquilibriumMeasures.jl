@@ -21,7 +21,7 @@ using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, Test
     @test sum(μ) ≈ 1 atol=1E-13
 
     # non-unique minimiser
-    μ, b = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), returnEndpoint=true)
+    μ, b = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), returnendpoint=true)
     @test sum(μ) ≈ 1 atol=1E-13
     
     # Deflate found solution and find another one whilst damping the Newton step

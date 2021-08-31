@@ -1,4 +1,4 @@
-using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, Test
+using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, FillArrays, BlockArrays, LazyBandedMatrices, Test
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -32,7 +32,6 @@ end
 @testset "two-interval" begin
     V = x -> x^4 - 10x^2
     xx = range(-4,4; length=1000)
-    plot(xx, V.(xx))
     a,b,c,d = -3,-1,1,3
     W = PiecewiseInterlace(Weighted(chebyshevu(a..b)), Weighted(chebyshevu(c..d)))
     T = PiecewiseInterlace(chebyshevt(a..b), chebyshevt(c..d))

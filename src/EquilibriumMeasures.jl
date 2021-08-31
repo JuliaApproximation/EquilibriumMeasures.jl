@@ -1,10 +1,11 @@
-
 module EquilibriumMeasures
 using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
 
 import ForwardDiff: derivative, gradient, jacobian
 
-export equilibriummeasure
+import LinearAlgebra: dot
+
+export equilibriummeasure, _equilibriummeasure, deflation_inner_products, deflation_deriv, deflation_op, deflation_scale
 
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
@@ -36,23 +37,87 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0, sum(μ) - 1)
 end
 
-
-function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000)
+function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)
     μ = EquilibriumMeasureMoment(V)
-    for k=1:maxiterations    
-        an = a - jacobian(μ, a)\μ(a)
+    num_found_sols = length(knownsolutions)
+    for k=1:maxiterations   
+        update = - jacobian(μ, a)\μ(a)
+        if num_found_sols > 0
+            update = deflation_scale(update, a, knownsolutions, power, shift) * update
+        end
+        an = a + dampening*update
         if an ≈ a
             # improve accuracy a bit more
             for _=1:3
-                a = a - jacobian(μ, a)\μ(a)
+                update = - jacobian(μ, a)\μ(a)
+                if num_found_sols > 0
+                    update = deflation_scale(update, a, knownsolutions, power, shift) * update
+                end
+                a = a + dampening*update
             end
-            return _equilibriummeasure(V, a...)[2]
+            if returnendpoint
+                return  _equilibriummeasure(V, a...)[2], a
+            else
+                return  _equilibriummeasure(V, a...)[2]
+            end
         end
         a = an
     end
     error("Max its")
 end
 
+# Deflation code
+
+function  deflation_inner_products(state::AbstractVector, sol)
+    num_sols = length(sol)
+    T = promote_type(eltype(state), eltype(eltype(sol)))
+
+    inner_products = zeros(T, num_sols)
+    for iter = 1:num_sols
+        inner_products[iter] = dot(state.-sol[iter], state.-sol[iter])
+    end
+    inner_products
+end
+
+function deflation_op(state::AbstractVector, sol, power::Real, shift::Real)
+    num_sols = length(sol)
+    T = promote_type(eltype(state), eltype(eltype(sol)))
+    power = T(power); shift = T(shift)
+
+    m = one(T)
+    inner_products = deflation_inner_products(state, sol)
+    
+    for iter = 1:num_sols
+        normsq = inner_products[iter]
+        factor = one(T)/normsq^(power/2) + shift
+        m = m*factor
+    end
+    m, inner_products
+end
+
+function deflation_deriv(update::AbstractVector, state::AbstractVector, sol::Vector, power::Real, shift::Real)
+    m, inner_products = deflation_op(state, sol, power, shift)
+    num_sols = length(sol)
+    T = promote_type(eltype(state), eltype(eltype(sol)))
+    power = T(power); shift = T(shift)
+
+    dm = zero(T)
+    state_dot_update = dot(state, update)
+    for iter = 1:num_sols
+        scale = m/deflation_op(state, sol[iter], power, shift)[1]
+        deriv = -power*state_dot_update/inner_products[iter]^((power + 1)/2)
+        dm += scale*deriv
+    end
+    m, dm
+end
+
+function deflation_scale(update::AbstractVector, state::AbstractVector, sol::Vector, power::Real, shift::Real)
+    T = promote_type(eltype(state), eltype(eltype(sol)))
+    m, dm = deflation_deriv(update, state, sol, power, shift)
+    minv = one(T)/m
+    tau = one(T) + minv*dm/(one(T) - minv*dm)
+    tau
+end
 
 
 # function equilibriummeasuresupport(V,ab=(-1.0..1.0);maxiterations=100,bounded=:none)

@@ -1,4 +1,4 @@
-using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, Test
+using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, FillArrays, BlockArrays, LazyBandedMatrices, Test
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -21,14 +21,17 @@ using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, Test
     @test sum(μ) ≈ 1 atol=1E-13
 
     # non-unique minimiser
-    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2))
+    μ, b = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), returnendpoint=true)
     @test sum(μ) ≈ 1 atol=1E-13
+    
+    # Deflate found solution and find another one whilst damping the Newton step
+    μ = equilibriummeasure(x -> (x-3)*(x-2)*(1+x)*(2+x)*(3+x)*(2x-1)/20; a=SVector(-3,-2), knownsolutions=[b], dampening=0.3)
+    @test sum(μ) ≈ 1 atol=1E-6
 end
 
 @testset "two-interval" begin
     V = x -> x^4 - 10x^2
     xx = range(-4,4; length=1000)
-    plot(xx, V.(xx))
     a,b,c,d = -3,-1,1,3
     W = PiecewiseInterlace(Weighted(chebyshevu(a..b)), Weighted(chebyshevu(c..d)))
     T = PiecewiseInterlace(chebyshevt(a..b), chebyshevt(c..d))

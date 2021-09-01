@@ -18,4 +18,4 @@ plot!(equilibriummeasure(x -> x^4); label="x^4")
 plot!(equilibriummeasure(x -> x^100); label="x^100")
 plot!(equilibriummeasure(x -> exp(x) - x); label="exp(x) - x")
 ```
-<img src=https://github.com/JuliaApproximation/EquilibriumMeasures.jl/raw/master/images/ems.svg width=500 height=600>
+<img src=https://github.com/JuliaApproximation/EquilibriumMeasures.jl/raw/master/images/ems.svg>

@@ -1,4 +1,5 @@
 using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, FillArrays, BlockArrays, LazyBandedMatrices, Test
+import EquilibriumMeasures: EquilibriumMeasureMoment
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -30,15 +31,8 @@ using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, FillArr
 end
 
 @testset "two-interval" begin
-    V = x -> x^4 - 10x^2
-    xx = range(-4,4; length=1000)
-    a,b,c,d = -3,-1,1,3
-    W = PiecewiseInterlace(Weighted(chebyshevu(a..b)), Weighted(chebyshevu(c..d)))
-    T = PiecewiseInterlace(chebyshevt(a..b), chebyshevt(c..d))
-    x = axes(W,1)
-    H = T \ inv.(x .- x') * W
-    # H[Block.(2:
-    E1 = PseudoBlockArray([Eye(2); Zeros(∞,2)], (axes(W,2), Base.OneTo(2)))
-    H2 = BlockHcat(E1, H)
-    H2 \ (T \ V.(x))
+    # see EquilibriumMeasureExamples.nb
+    V = x -> 0.7*(x^4 - 2x^3 - x^2 + 2x)
+    a,b,c,d = -1.0637226766068189, 0.2659671162729329, 0.7340328837270674, 2.063722676606819
+    @test norm(EquilibriumMeasureMoment(V)(SVector(a,b,c,d))) ≤ 1E-1
 end

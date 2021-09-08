@@ -1,5 +1,6 @@
 module EquilibriumMeasures
-using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays
+using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays,
+    FillArrays, BlockArrays, LazyBandedMatrices
 
 import ForwardDiff: derivative, gradient, jacobian
 
@@ -9,8 +10,8 @@ export equilibriummeasure, _equilibriummeasure, deflation_inner_products, deflat
 
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
-function _equilibriummeasure(V, a, b)
-    Typ = float(promote_type(typeof(a), typeof(b)))
+function _equilibriummeasure(V, ab::SVector{2,Typ}) where Typ
+    a,b = ab
     T = ChebyshevT{Typ}()
     x = Inclusion(a..b)
     y = affine(x, axes(T,1)) # affine map from a..b to -1..1
@@ -26,21 +27,43 @@ function _equilibriummeasure(V, a, b)
     Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])/2
 end
 
+function _equilibriummeasure(V, ad::SVector{4,Typ}) where Typ
+    a,b,c,d = ad
+    T1,T2 = chebyshevt(a..b),chebyshevt(c..d)
+    U1,U2 = chebyshevu(a..b),chebyshevu(c..d)
+    T = PiecewiseInterlace(T1, T2)
+    U = PiecewiseInterlace(U1, U2)
+    W = PiecewiseInterlace(Weighted(U1), Weighted(U2))
+    x = axes(W,1)
+    # Operators
+    D = U \ (Derivative(x) * T) # Derivative T -> U
+    UT = U \ T  # Converion T -> U
+    V_cfs = T \ V.(x)
+    Vp_cfs = UT \ (D * V_cfs)
+
+    H = T \ (inv.(x .- x') * W) # Hilbert W -> T
+
+    # add extra columns for constants
+    H̃ = BlockHcat(Eye((axes(H,1),))[:,Block(1)], 2H)
+    c = H̃ \ Vp_cfs
+    c[Block(1)], W * c[Block.(2:∞)]
+end
+
 
 # Intentionally hide type for compile time
 struct EquilibriumMeasureMoment
     V
 end
 
-function (E::EquilibriumMeasureMoment)(a) 
-    c0,μ = _equilibriummeasure(E.V, a...)
-    SVector(c0, sum(μ) - 1)
+function (E::EquilibriumMeasureMoment)(a)
+    c0,μ = _equilibriummeasure(E.V, a)
+    SVector(c0..., sum(μ) - 1)
 end
 
 function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)
     μ = EquilibriumMeasureMoment(V)
     num_found_sols = length(knownsolutions)
-    for k=1:maxiterations   
+    for k=1:maxiterations
         update = - jacobian(μ, a)\μ(a)
         if num_found_sols > 0
             update = deflation_scale(update, a, knownsolutions, power, shift) * update
@@ -86,7 +109,7 @@ function deflation_op(state::AbstractVector, sol, power::Real, shift::Real)
 
     m = one(T)
     inner_products = deflation_inner_products(state, sol)
-    
+
     for iter = 1:num_sols
         normsq = inner_products[iter]
         factor = one(T)/normsq^(power/2) + shift

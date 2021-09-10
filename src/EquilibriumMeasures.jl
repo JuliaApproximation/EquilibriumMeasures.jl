@@ -5,6 +5,7 @@ using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, Interv
 import ForwardDiff: derivative, gradient, jacobian
 
 import LinearAlgebra: dot
+import IntervalSets: mean
 
 export equilibriummeasure, _equilibriummeasure, deflation_inner_products, deflation_deriv, deflation_op, deflation_scale
 
@@ -55,9 +56,16 @@ struct EquilibriumMeasureMoment
     V
 end
 
+_logterms(μ, d) = ()
+function _logterms(μ, d1, d2)
+    x = axes(μ,1)
+    z1,z2 = mean(d1),mean(d2)
+    (log.(abs.(z1 .- x'))*μ - log.(abs.(z2 .- x'))*μ,)
+end
+
 function (E::EquilibriumMeasureMoment)(a)
     c0,μ = _equilibriummeasure(E.V, a)
-    SVector(c0..., sum(μ) - 1)
+    SVector(c0..., sum(μ) - 1, _logterms(μ, components(axes(μ,1).domain)...)...)
 end
 
 function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)

@@ -1,5 +1,6 @@
 using EquilibriumMeasures, StaticArrays, ClassicalOrthogonalPolynomials, FillArrays, BlockArrays, LazyBandedMatrices, Test
 import EquilibriumMeasures: EquilibriumMeasureMoment
+using ForwardDiff: jacobian
 
 @testset "EquilibriumMeasures" begin
     μ = equilibriummeasure(x -> x^2)
@@ -33,6 +34,13 @@ end
 @testset "two-interval" begin
     # see EquilibriumMeasureExamples.nb
     V = x -> 0.7*(x^4 - 2x^3 - x^2 + 2x)
-    a,b,c,d = -1.0637226766068189, 0.2659671162729329, 0.7340328837270674, 2.063722676606819
-    @test norm(EquilibriumMeasureMoment(V)(SVector(a,b,c,d))) ≤ 1E-1
+    a_ex = SVector(-1.0637226766068189, 0.2659671162729329, 0.7340328837270674, 2.063722676606819)
+    @test norm(EquilibriumMeasureMoment(V)(a_ex)) ≤ 1E-13
+
+    a = SVector(-1,0,0.5,2)
+    m = EquilibriumMeasureMoment(V)
+    for _ = 1:10
+        a -= jacobian(m, a) \ m(a)
+    end
+    @test norm(a - a_ex) ≤ 1E-13
 end

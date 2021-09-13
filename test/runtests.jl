@@ -38,22 +38,10 @@ end
     @test norm(EquilibriumMeasureMoment(V)(a_ex)) ≤ 1E-13
 
     a = SVector(-1,0,0.5,2)
-    # bug in inconsistent result
-    for _ = 1:20
-        @test all(_equilibriummeasure(V, a)[1] .=== _equilibriummeasure(V, a)[1])
-        # @test ((_,μ) = _equilibriummeasure(V, a); log.(abs.(z1 .- x')) * μ) === ((_,μ) = _equilibriummeasure(V, a); log.(abs.(z1 .- x')) * μ)
-    end
-
 
     m = EquilibriumMeasureMoment(V)
     @time for _ = 1:8
         a -= jacobian(m, a) \ m(a)
     end
     @test norm(a - a_ex) ≤ 1E-13
-
-    
-
-
-    x = axes(μ,1)
-    log.(abs.(z1 .- x')) * μ - log.(abs.(z1 .- x')) * μ
 end

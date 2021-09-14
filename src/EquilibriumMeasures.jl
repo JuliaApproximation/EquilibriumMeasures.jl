@@ -56,6 +56,7 @@ struct EquilibriumMeasureMoment
     V
 end
 
+_logterms(μ) = ()
 _logterms(μ, d) = ()
 function _logterms(μ, d1, d2)
     x = axes(μ,1)
@@ -87,9 +88,9 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knowns
                 a = a + dampening*update
             end
             if returnendpoint
-                return  _equilibriummeasure(V, a...)[2], a
+                return  _equilibriummeasure(V, a)[2], a
             else
-                return  _equilibriummeasure(V, a...)[2]
+                return  _equilibriummeasure(V, a)[2]
             end
         end
         a = an

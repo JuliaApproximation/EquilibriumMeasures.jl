@@ -21,7 +21,7 @@ MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-BlockArrays = "0.16"
+BlockArrays = "0.16.6"
 ClassicalOrthogonalPolynomials = "0.4.7"
 ContinuumArrays = "0.9"
 DomainSets = "0.5"

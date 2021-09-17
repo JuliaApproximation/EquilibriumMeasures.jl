@@ -11,8 +11,9 @@ export equilibriummeasure, _equilibriummeasure, deflation_inner_products, deflat
 
 Base.floatmin(::Type{<:ForwardDiff.Dual}) = floatmin(Float64)
 
-function _equilibriummeasure(V, ab::SVector{2,Typ}) where Typ
+function _equilibriummeasure(V, ab::SVector{2})
     a,b = ab
+    Typ = float(eltype(ab))
     T = ChebyshevT{Typ}()
     x = Inclusion(a..b)
     y = affine(x, axes(T,1)) # affine map from a..b to -1..1
@@ -28,8 +29,9 @@ function _equilibriummeasure(V, ab::SVector{2,Typ}) where Typ
     Vp_cfs[1], wŨ * (H[2:end,:] \ Vp_cfs[2:end])/2
 end
 
-function _equilibriummeasure(V, ad::SVector{4,Typ}) where Typ
+function _equilibriummeasure(V, ad::SVector{4})
     a,b,c,d = ad
+    Typ = float(eltype(ad))
     T1,T2 = chebyshevt(a..b),chebyshevt(c..d)
     U1,U2 = chebyshevu(a..b),chebyshevu(c..d)
     T = PiecewiseInterlace(T1, T2)

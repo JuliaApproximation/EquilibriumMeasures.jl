@@ -58,12 +58,12 @@ struct EquilibriumMeasureMoment
     V
 end
 
-_logterms(μ) = ()
-_logterms(μ, d) = ()
+_logterms(V, μ) = ()
+_logterms(V, μ, d) = ()
 function _logterms(V, μ, d1, d2)
     x = axes(μ,1)
     z1,z2 = mean(d1),mean(d2)
-    (2*log.(abs.(z1 .- x'))*μ + V(z1) - 2*log.(abs.(z2 .- x'))*μ - V(z2),)
+    (2*(log.(abs.(z1 .- x'))*μ) - V(z1) - 2*(log.(abs.(z2 .- x'))*μ) + V(z2),)
 end
 
 function (E::EquilibriumMeasureMoment)(a)

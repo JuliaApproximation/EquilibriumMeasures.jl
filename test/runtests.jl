@@ -47,4 +47,5 @@ end
     @test norm(EquilibriumMeasureMoment(V)(a_ex)) ≤ 1E-13
     
     @time μ = equilibriummeasure(V; a=SVector(-3,1,2,3))
+    @test all(components(axes(μ,1).domain) .≈ (a_ex[1]..a_ex[2], a_ex[3]..a_ex[4]))
 end

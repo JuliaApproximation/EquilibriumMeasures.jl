@@ -60,15 +60,15 @@ end
 
 _logterms(μ) = ()
 _logterms(μ, d) = ()
-function _logterms(μ, d1, d2)
+function _logterms(V, μ, d1, d2)
     x = axes(μ,1)
     z1,z2 = mean(d1),mean(d2)
-    (log.(abs.(z1 .- x'))*μ - log.(abs.(z2 .- x'))*μ,)
+    (2*log.(abs.(z1 .- x'))*μ + V(z1) - 2*log.(abs.(z2 .- x'))*μ - V(z2),)
 end
 
 function (E::EquilibriumMeasureMoment)(a)
     c0,μ = _equilibriummeasure(E.V, a)
-    SVector(c0..., sum(μ) - 1, _logterms(μ, components(axes(μ,1).domain)...)...)
+    SVector(c0..., sum(μ) - 1, _logterms(E.V, μ, components(axes(μ,1).domain)...)...)
 end
 
 function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)

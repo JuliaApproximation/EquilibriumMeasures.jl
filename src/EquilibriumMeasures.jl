@@ -54,8 +54,8 @@ end
 
 
 # Intentionally hide type for compile time
-struct EquilibriumMeasureMoment
-    V
+struct EquilibriumMeasureMoment{VV}
+    V::VV
 end
 
 _logterms(V, μ) = ()

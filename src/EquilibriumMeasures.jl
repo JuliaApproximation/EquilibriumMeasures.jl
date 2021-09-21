@@ -54,16 +54,17 @@ end
 
 
 # Intentionally hide type for compile time
-struct DFunction
+struct DFunction <: Function
     f
 end
 (f::DFunction)(x::T) where T = f.f(x)::T
+Base.convert(::Type{DFunction}, f::DFunction) = f
+Base.convert(::Type{DFunction}, f::Function) = DFunction(f)
 
 
 struct EquilibriumMeasureMoment
     V::DFunction
 end
-EquilibriumMeasureMoment(f) = EquilibriumMeasureMoment(DFunction(f))
 
 _logterms(V, μ) = ()
 _logterms(V, μ, d) = ()

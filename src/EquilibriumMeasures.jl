@@ -54,9 +54,16 @@ end
 
 
 # Intentionally hide type for compile time
-struct EquilibriumMeasureMoment{VV}
-    V::VV
+struct DFunction
+    f
 end
+(f::DFunction)(x::T) where T = f.f(x)::T
+
+
+struct EquilibriumMeasureMoment
+    V::DFunction
+end
+EquilibriumMeasureMoment(f) = EquilibriumMeasureMoment(DFunction(f))
 
 _logterms(V, μ) = ()
 _logterms(V, μ, d) = ()
@@ -71,8 +78,9 @@ function (E::EquilibriumMeasureMoment)(a)
     SVector(c0..., sum(μ) - 1, _logterms(E.V, μ, components(axes(μ,1).domain)...)...)
 end
 
-function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false)
-    μ = EquilibriumMeasureMoment(V)
+equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knownsolutions=[], power=2, shift=1.0, dampening=1.0, returnendpoint=false) =
+    deflate_equilibriummeasure(EquilibriumMeasureMoment(DFunction(V)), a, maxiterations, knownsolutions, power, shift, dampening, returnendpoint)
+function deflate_equilibriummeasure(μ, a, maxiterations, knownsolutions, power, shift, dampening, returnendpoint)
     num_found_sols = length(knownsolutions)
     for k=1:maxiterations
         update = - jacobian(μ, a)\μ(a)
@@ -90,9 +98,9 @@ function equilibriummeasure(V; a = SVector(-1.0,1.0), maxiterations=1000, knowns
                 a = a + dampening*update
             end
             if returnendpoint
-                return  _equilibriummeasure(V, a)[2], a
+                return  _equilibriummeasure(μ.V, a)[2], a
             else
-                return  _equilibriummeasure(V, a)[2]
+                return  _equilibriummeasure(μ.V, a)[2]
             end
         end
         a = an

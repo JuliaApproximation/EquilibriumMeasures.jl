@@ -23,7 +23,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 BandedMatrices = "0.16"
 BlockArrays = "0.16.6"
-ClassicalOrthogonalPolynomials = "0.4.7"
+ClassicalOrthogonalPolynomials = "0.4.7, 0.5"
 ContinuumArrays = "0.9, 0.10"
 DomainSets = "0.5"
 FillArrays = "0.12"

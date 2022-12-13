@@ -1,6 +1,6 @@
 module EquilibriumMeasures
 using Base, ClassicalOrthogonalPolynomials, ContinuumArrays, ForwardDiff, IntervalSets, DomainSets, StaticArrays,
-    FillArrays, BlockArrays, LazyBandedMatrices
+    FillArrays, BlockArrays, LazyBandedMatrices, FastTransformsForwardDiff
 
 import ForwardDiff: derivative, gradient, jacobian
 

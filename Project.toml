@@ -1,6 +1,6 @@
 name = "EquilibriumMeasures"
 uuid = "f387465c-e20c-5ab1-9210-5d86af51062a"
-version = "0.1"
+version = "0.1.0"
 
 [deps]
 BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
@@ -19,6 +19,7 @@ LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
 LazyBandedMatrices = "d7e5e226-e90b-4449-9968-0f923699bf6f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MatrixFactorizations = "a3b82374-2e81-5b9e-98ce-41277c0e4c87"
+MultivariateOrthogonalPolynomials = "4f6956fd-4f93-5457-9149-7bfc4b2ce06d"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]

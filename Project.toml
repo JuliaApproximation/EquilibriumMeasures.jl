@@ -38,7 +38,7 @@ IntervalSets = "0.5, 0.6, 0.7"
 LazyArrays = "1"
 LazyBandedMatrices = "0.8"
 MatrixFactorizations = "1"
-SingularIntegrals = "0.0.1, 0.0.2, 0.0.3"
+SingularIntegrals = "0.0.1, 0.0.2, 0.0.3, 0.1"
 StaticArrays = "1"
 julia = "1.7"
 

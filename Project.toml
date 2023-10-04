@@ -23,7 +23,7 @@ SingularIntegrals = "d7440221-8b5e-42fc-909c-0567823f424a"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
-BandedMatrices = "0.17"
+BandedMatrices = "0.17, 1"
 BlockArrays = "0.16.6"
 ClassicalOrthogonalPolynomials = "0.8, 0.9, 0.10, 0.11"
 ContinuumArrays = "0.12, 0.13"
